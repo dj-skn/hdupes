@@ -1,0 +1,56 @@
+#
+# Build ignores
+#
+#.*
+*.o
+*.o.*
+*.obj
+*.exe
+*.a
+*.so
+*.so.*
+*.1.gz
+
+#
+# Never ignore these
+#
+!.gitignore
+
+#
+# Normal output and testing dirs
+#
+/build_date.h
+/hashdb_util
+/hashdb_util*.exe
+/hdupes
+/hdupes*.exe
+/hdupes-standalone
+/hdupes-*-*/
+/hdupes-*-*.zip
+/hdupes_hashdb.txt
+/*.pkg.tar.*
+test_temp
+output.log
+
+#
+# Backups / patches
+#
+*~
+*.orig
+*.rej
+/*.patch
+
+#
+# debugging and editor stuff
+#
+core
+.gdb_history
+.gdbinit
+.*.swp
+*.gcda
+*.gcno
+*.gcov
+cachegrind.out.*
+
+# Mac OS
+.DS_Store
