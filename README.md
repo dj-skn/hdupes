@@ -48,6 +48,12 @@ hdupes -d ~/Downloads
 ## Install (local build)
 Requirements: `libjodycode`
 
+Homebrew (tap):
+```
+brew tap dj-skn/hdupes
+brew install hdupes
+```
+
 Homebrew:
 ```
 brew install libjodycode
