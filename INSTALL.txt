@@ -1,0 +1,138 @@
+Building and Installing hdupes
+-----------------------------------------------------------------------------
+You must have libjodycode to build and run hdupes. Install the libjodycode
+library and development headers from your distribution package manager. These
+will probably be called "libjodycode" and "libjodycode-dev".
+
+If your distribution doesn't have libjodycode, get it here:
+
+https://codeberg.org/jbruchon/libjodycode
+
+If you clone and build libjodycode into ../libjodycode/ then the build will use
+the header and library in that location instead of the libjodycode already
+installed on the system. You can then test the dynamically linked hdupes by
+telling it where to look:
+
+LD_LIBRARY_PATH=../libjodycode ./hdupes
+
+To install the program with the default options and flags, just issue the
+following commands:
+
+make
+sudo make install
+
+This installs all hdupes files under /usr/local by default. You may change this
+to a different location by editing the Makefile or specifying a PREFIX on the
+command line: 'make PREFIX=/usr install'. DESTDIR is also supported to place
+everything into a different location for i.e. building distribution packages:
+'make DESTDIR=/pkg/hdupes install'. There is also a package generation script
+'generate_packages.sh' which tries to make an archive file containing all of
+the necessary files for distribution; for Linux you can also tell it which
+x86 architecture you want explicitly (i686, x32, x86_64):
+'make package ARCH=x32"
+
+To force static or dynamic linking of libjodycode, use the make targets
+static_jc and dynamic_jc respectively. On Windows you must tell Make to use
+the DLL version explicitly: 'make FORCE_JC_DLL=1' (ld on Windows doesn't seem
+to respect -Wl,-Bdynamic properly).
+
+On Windows, you need to use MSYS2 with MinGW-w64 installed. Use this guide to
+install the build environment:
+
+https://stackoverflow.com/a/30071634/1906641
+
+Running "make" as usual under the MSYS2 mingw32/mingw64 terminal will build a
+Windows binary for the bitness of the terminal you're using. The Makefile will
+detect a Windows environment and automatically make the needed build changes.
+
+Various build options are available and can be turned on at compile time by
+setting CFLAGS_EXTRA or by passing it to 'make':
+
+make CFLAGS_EXTRA=-DYOUR_OPTION
+make CFLAGS_EXTRA='-DYOUR_OPTION_ONE -DYOUR_OPTION_TWO'
+
+This is a list of options that can be "turned on" this way:
+
+ON_WINDOWS         Modify code to compile with MinGW on Windows
+NO_WINDOWS         Disable Windows MinGW special cases (mainly for Cygwin)
+NO_ATIME           Disable all access time features
+NO_CHUNKSIZE       Disable auto I/O chunk sizing code and -C option
+NO_DELETE          Disable deletion -d, -N
+NO_ERRORONDUPE     Disable error exit on first dupe found -E
+NO_EXTFILTER       Disable extended filter -X
+NO_GETOPT_LONG     Disable getopt_long() (long options will not work)
+NO_HARDLINKS       Disable hard link code -L, -H
+NO_HASHDB          Disable hash cache database feature -y
+NO_HELPTEXT        Disable all help text and almost all version text
+NO_NUMSORT         Disable numerically correct case-ignored symbols-last sort
+NO_JSON            Disable JSON output -j
+NO_MTIME           Disable all modify time features
+NO_PERMS           Disable permission matching -p
+NO_SYMLINKS        Disable symbolic link code -l, -s
+NO_TRAVCHECK       Disable double-traversal safety code (-U always on)
+NO_USER_ORDER      Disable isolation and parameter sort order -I, -O
+
+Certain options can be turned on by setting a variable passed to make instead
+of using CFLAGS_EXTRA, i.e. 'make DEBUG=1':
+
+NO_UNICODE             [Windows only] disable all Unicode support
+DEBUG                  Turn on algorithm statistic reporting with '-D'
+LOUD                   '-@' for low-level debugging; enables DEBUG
+ENABLE_DEDUPE          Enable '-B' deduplication (Linux/macOS: on by default)
+DISABLE_DEDUPE         Forcibly disable (undefine) ENABLE_DEDUPE
+STATIC_DEDUPE_H        Build dedupe support with included minimal header file
+LOW_MEMORY             Build for extremely low-RAM environments (CAUTION!)
+BARE_BONES             Build LOW_MEMORY with very aggressive code removal
+USE_JODY_HASH          Use jody_hash instead of xxHash64 (smaller, slower)
+EXTENRAL_HASH_LIB      Force hash code to be linked in externally (no build)
+FORCE_JC_DLL           Windows only: force linking to nearby libjodycode.dll
+IGNORE_NEARBY_JC       Do NOT use libjodycode at ../libjodycode if it exists
+GC_SECTIONS            Use gcc/ld section garbage collection to reduce size
+
+EXTERNAL_HASH_LIB will build hdupes with the interface code for the chosen hash
+type (xxhash vs jody_hash) but will suppress building the actual code. This is
+intended for use by OS distributions to use a shared library. You will need to
+link against the shared library on your own (i.e. LDFLAGS=-lxxhash make).
+
+The LOW_MEMORY option tweaks various knobs in the program to lower total
+memory usage. It also disables some features to reduce the size of certain
+data structures. The improvements in memory usage are not very large, but if
+you're running in a very RAM-limited environment or have a CPU with very small
+caches it may be a good choice. This is primarily meant for use in embedded
+systems and should not be used unless you know what you are doing.
+
+The BARE_BONES option sets LOW_MEMORY and also enables code removals that are
+extremely aggressive, to the point that what some might consider fundamental
+capabilities and safety features are completely stripped out, inclduing the
+NO_DELETE and NO_TRAVCHECK options. It is intended to reduce the program to
+the most basic functionality expected of a simple duplicate finder and may
+be suitable for embedded systems with extremely limited storage and memory.
+This is an example of the size drop for a normal 64-bit Windows build:
+
+   text    data     bss   total  filename
+ 128384    6988  167776  303148  hdupes.exe
+  74248    6348   29888  110484  hdupes-barebones.exe
+-------------------------------
+- 54136     640  137888  192664  size reduction (64% smaller)
+
+A test directory is included so that you may familiarize yourself with the way
+hdupes operates. You may test the program before installing it by issuing a
+command such as "./hdupes testdir" or "./hdupes -r testdir", just to name a
+couple of examples. See the README for information on valid options.
+
+A comparison shell script is also included. It will run your natively
+installed 'hdupes' or 'hdupes' with the directories and extra options you
+specify and compare the run times and output a 'diff' of the two program
+outputs. Unless the core algorithm or sort behavior is changed, both programs
+should produce identical outputs and the 'diff' output shouldn't appear at
+all. To use it, type:
+
+./compare_hdupes.sh [options]
+
+There are some package generators included as make targets:
+
+chrootpackage  Uses chroots under /chroot to build Linux packages
+package        Makes auto-detected macOS/Linux/Windows packages
+
+If you have a multilib compiler for x86_64 you can specify an architecture to
+make packages for: 'ARCH=xxx make package' where xxx is i386, x86_64, or x32.
