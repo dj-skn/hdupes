@@ -125,6 +125,7 @@ void help_text(void)
   printf(" -e --error-on-dupe\texit on any duplicate found with status code 255\n");
 #endif
   printf(" -f --omit-first  \tomit the first file in each set of matches\n");
+  printf(" -g --sort-groups \tsort match groups by total size (largest first)\n");
   printf(" -h --help        \tdisplay this help message\n");
 #ifndef NO_HARDLINKS
   printf(" -H --hard-links  \ttreat any linked files as duplicate files. Normally\n");
@@ -155,6 +156,7 @@ void help_text(void)
 #endif /* NO_HARDLINKS */
   printf(" -m --summarize   \tsummarize dupe information\n");
   printf(" -M --print-summarize\tprint match sets and --summarize at the end\n");
+  printf("     --large-dupes\tpreset: -r -S -M -A -X size+:1k --threads=8\n");
 #ifndef NO_DELETE
   printf(" -N --no-prompt   \ttogether with --delete, preserve the first file in\n");
   printf("                  \teach set of duplicates and delete the rest without\n");

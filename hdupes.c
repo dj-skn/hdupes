@@ -200,6 +200,7 @@ int main(int argc, char **argv)
     { "isolate", 0, 0, 'I' },
     { "reverse", 0, 0, 'i' },
     { "json", 0, 0, 'j' },
+    { "sort-groups", 0, 0, 'g' },
     { "threads", 1, 0, 'J' },
 /*    { "skip-hash", 0, 0, 'K' }, */
     { "link-hard", 0, 0, 'L' },
@@ -226,6 +227,7 @@ int main(int argc, char **argv)
     { "hash-db", 1, 0, 'y' },
     { "soft-abort", 0, 0, 'Z' },
     { "zero-match", 0, 0, 'z' },
+    { "large-dupes", 0, 0, 1000 },
     { NULL, 0, 0, 0 }
   };
  #define GETOPT getopt_long
@@ -233,7 +235,7 @@ int main(int argc, char **argv)
  #define GETOPT getopt
 #endif
 
-#define GETOPT_STRING "@019ABC:DdEefHhIiJjKLlMmNnOo:P:pQqRrSsTtUuVvX:y:Zz"
+#define GETOPT_STRING "@019ABC:DdEefgHhIiJjKLlMmNnOo:P:pQqRrSsTtUuVvX:y:Zz"
 
   /* Verify libjodycode compatibility before going further */
   if (libjodycode_version_check(1, 0) != 0) {
@@ -370,6 +372,10 @@ int main(int argc, char **argv)
     case 'f':
       SETFLAG(a_flags, FA_OMITFIRST);
       LOUD(fprintf(stderr, "opt: omit first match from each match set (--omit-first)\n");)
+      break;
+    case 'g':
+      SETFLAG(flags, F_SORTGROUPS);
+      LOUD(fprintf(stderr, "opt: sort groups by total size (--sort-groups)\n");)
       break;
     case 'h':
       help_text();
@@ -562,6 +568,19 @@ int main(int argc, char **argv)
       SETFLAG(flags, F_DEBUG | F_LOUD | F_HIDEPROGRESS);
 #endif
       LOUD(fprintf(stderr, "opt: loud debugging enabled, hope you can handle it (--loud)\n");)
+      break;
+    case 1000:
+      SETFLAG(flags, F_RECURSE | F_EXCLUDEHIDDEN);
+      SETFLAG(a_flags, FA_SHOWSIZE | FA_PRINTMATCHES | FA_SUMMARIZEMATCHES);
+#ifndef NO_EXTFILTER
+      add_extfilter("size+:1k");
+#else
+      fprintf(stderr, "warning: --large-dupes requires extfilter support; size filter skipped\n");
+#endif
+#ifdef HDUPES_HAS_THREADS
+      hash_threads = 8;
+#endif
+      LOUD(fprintf(stderr, "opt: preset large dupes scan (--large-dupes)\n");)
       break;
 
     default:

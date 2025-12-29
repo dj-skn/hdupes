@@ -61,6 +61,9 @@ exit on any duplicate found with status code 255
 .B -f --omit-first
 omit the first file in each set of matches
 .TP
+.B -g --sort-groups
+sort match groups by total size (largest first)
+.TP
 .B -H --hard-links
 normally, when two or more files point to the same disk area they are
 treated as non-duplicates; this option will change this behavior
@@ -90,6 +93,9 @@ summarize duplicate file information
 .TP
 .B -M --print-summarize
 print matches and summarize the duplicate file information at the end
+.TP
+.B --large-dupes
+preset: \-r \-S \-M \-A \-X size+:1k \-\-threads=8
 .TP
 .B -N --no-prompt
 when used together with \-\-delete, preserve the first file in each set of
