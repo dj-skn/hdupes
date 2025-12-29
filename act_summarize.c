@@ -6,6 +6,7 @@
 #include <inttypes.h>
 #include "hdupes.h"
 #include "act_summarize.h"
+#include "style.h"
 
 static void format_bytes(uintmax_t bytes, char *out, size_t out_size)
 {
@@ -49,14 +50,15 @@ void summarizematches(const file_t * restrict files)
   if (pretty) {
     char total_buf[32];
     format_bytes((uintmax_t)numbytes, total_buf, sizeof(total_buf));
-    printf("\n%s\n", divider);
+    printf("\n%s%s%s\n", hdupes_color(stdout, HDUPES_BLUE), divider, hdupes_color(stdout, HDUPES_RESET));
     if (numsets == 0) {
-      printf("✓ No duplicates found\n");
+      printf("%s✓%s No duplicates found\n",
+        hdupes_color(stdout, HDUPES_GREEN), hdupes_color(stdout, HDUPES_RESET));
     } else {
       printf("Scan complete\n");
       printf("Potential space: %s | Items: %d | Groups: %u\n", total_buf, numfiles, numsets);
     }
-    printf("%s\n", divider);
+    printf("%s%s%s\n", hdupes_color(stdout, HDUPES_BLUE), divider, hdupes_color(stdout, HDUPES_RESET));
   } else {
     if (numsets == 0)
       printf("%s", s_no_dupes);
