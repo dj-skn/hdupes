@@ -26,6 +26,8 @@ hdupes -r --threads=4 PATH...
 - Pre-hash threading with `--threads N` (hashing stage only)
 - Flexible filters by size, extension, substring, and date
 - Safe defaults and traversal safety checks
+- Group sorting by total size (`--sort-groups`)
+- Preset scan for large duplicates (`--large-dupes`)
 
 ## Usage
 ```
@@ -80,6 +82,7 @@ make install PREFIX="$HOME/.local"
 - `-d --delete` prompt to delete duplicates
 - `-e --error-on-dupe` exit on any duplicate found with status code 255
 - `-f --omit-first` omit the first file in each set of matches
+- `-g --sort-groups` sort match groups by total size (largest first)
 - `-H --hard-links` treat hard-linked files as duplicates
 - `-h --help` display help
 - `-i --reverse` reverse sort order
@@ -90,6 +93,7 @@ make install PREFIX="$HOME/.local"
 - `-L --link-hard` hard link duplicates without prompting
 - `-m --summarize` summarize dupe information
 - `-M --print-summarize` print matches and summarize at the end
+- `--large-dupes` preset: `-r -S -M -A -X size+:1k --threads=8`
 - `-N --no-prompt` with `--delete`, keep first file and delete the rest
 - `-O --param-order` parameter order is more important than selected sort
 - `-o --order=BY` sort by `name` (default) or `time`

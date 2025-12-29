@@ -153,6 +153,7 @@ extern uint64_t flags, a_flags, p_flags;
 #define F_NOCHANGECHECK		(1ULL << 17)
 #define F_NOTRAVCHECK		(1ULL << 18)
 #define F_SKIPHASH		(1ULL << 19)
+#define F_SORTGROUPS		(1ULL << 20)
 #define F_BENCHMARKSTOP		(1ULL << 29)
 #define F_HASHDB		(1ULL << 30)
 
