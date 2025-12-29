@@ -2,7 +2,7 @@ class Hdupes < Formula
   desc "Fast duplicate file finder with safe defaults and optional actions"
   homepage "https://github.com/dj-skn/hdupes"
   url "https://github.com/dj-skn/hdupes/archive/refs/tags/v1.0.1.tar.gz"
-  sha256 "REPLACE_WITH_SHA256"
+  sha256 "0019dfc4b32d63c1392aa264aed2253c1e0c2fb09216f8e2cc269bbfb8bb49b5"
   license "MIT"
 
   depends_on "libjodycode"
