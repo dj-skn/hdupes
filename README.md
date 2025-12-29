@@ -93,7 +93,7 @@ make install PREFIX="$HOME/.local"
 - `-L --link-hard` hard link duplicates without prompting
 - `-m --summarize` summarize dupe information
 - `-M --print-summarize` print matches and summarize at the end
-- `--large-dupes` preset: `-r -S -M -A -X size+:1k --threads=8`
+- `--large-dupes` preset: `-r -S -M -X size+:1k --threads=8`
 - `-N --no-prompt` with `--delete`, keep first file and delete the rest
 - `-O --param-order` parameter order is more important than selected sort
 - `-o --order=BY` sort by `name` (default) or `time`

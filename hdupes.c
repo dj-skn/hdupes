@@ -570,7 +570,7 @@ int main(int argc, char **argv)
       LOUD(fprintf(stderr, "opt: loud debugging enabled, hope you can handle it (--loud)\n");)
       break;
     case 1000:
-      SETFLAG(flags, F_RECURSE | F_EXCLUDEHIDDEN);
+      SETFLAG(flags, F_RECURSE);
       SETFLAG(a_flags, FA_SHOWSIZE | FA_PRINTMATCHES | FA_SUMMARIZEMATCHES);
 #ifndef NO_EXTFILTER
       add_extfilter("size+:1k");
