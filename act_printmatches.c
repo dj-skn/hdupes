@@ -9,6 +9,7 @@
 #include "hdupes.h"
 #include <libjodycode.h>
 #include "act_printmatches.h"
+#include "style.h"
 
 typedef struct {
   file_t *head;
@@ -63,14 +64,20 @@ static void print_group_pretty(const group_info_t *group, int group_index)
   file_t *tmpfile = NULL;
 
   format_bytes((uintmax_t)group->head->size, size_buf, sizeof(size_buf));
-  printf("➤ Group %d · %" PRIuMAX " files · %s each\n", group_index, group->count, size_buf);
+  printf("%s➤%s Group %d · %" PRIuMAX " files · %s each\n",
+    hdupes_color(stdout, HDUPES_MAGENTA), hdupes_color(stdout, HDUPES_RESET),
+    group_index, group->count, size_buf);
 
   if (!ISFLAG(a_flags, FA_OMITFIRST)) {
-    printf("  → %s\n", group->head->d_name);
+    printf("  %s→%s %s\n",
+      hdupes_color(stdout, HDUPES_YELLOW), hdupes_color(stdout, HDUPES_RESET),
+      group->head->d_name);
   }
   tmpfile = group->head->duplicates;
   while (tmpfile != NULL) {
-    printf("  → %s\n", tmpfile->d_name);
+    printf("  %s→%s %s\n",
+      hdupes_color(stdout, HDUPES_YELLOW), hdupes_color(stdout, HDUPES_RESET),
+      tmpfile->d_name);
     tmpfile = tmpfile->duplicates;
   }
 }
@@ -129,8 +136,11 @@ void printmatches(file_t * restrict files)
     if (pretty) {
       char total_buf[32];
       format_bytes(total_bytes, total_buf, sizeof(total_buf));
-      printf("\nDuplicate Scan\n\n");
-      printf("⚙ Groups: %" PRIuMAX " | Files: %" PRIuMAX " | Total: %s\n\n", (uintmax_t)group_count, total_files, total_buf);
+      printf("\n%sDuplicate Scan%s\n\n",
+        hdupes_color(stdout, HDUPES_MAGENTA), hdupes_color(stdout, HDUPES_RESET));
+      printf("%s⚙%s Groups: %" PRIuMAX " | Files: %" PRIuMAX " | Total: %s\n\n",
+        hdupes_color(stdout, HDUPES_BLUE), hdupes_color(stdout, HDUPES_RESET),
+        (uintmax_t)group_count, total_files, total_buf);
     }
 
     for (idx = 0; idx < group_count; idx++) {
@@ -147,8 +157,10 @@ void printmatches(file_t * restrict files)
     free(groups);
   } else {
     if (pretty) {
-      printf("\nDuplicate Scan\n\n");
-      printf("➤ Match groups\n");
+      printf("\n%sDuplicate Scan%s\n\n",
+        hdupes_color(stdout, HDUPES_MAGENTA), hdupes_color(stdout, HDUPES_RESET));
+      printf("%s➤ Match groups%s\n",
+        hdupes_color(stdout, HDUPES_MAGENTA), hdupes_color(stdout, HDUPES_RESET));
     }
     int group_index = 0;
     while (files != NULL) {
@@ -177,7 +189,10 @@ void printmatches(file_t * restrict files)
   }
 
   if (printed == 0) {
-    if (pretty) printf("✓ No duplicates found\n");
+    if (pretty) {
+      printf("%s✓%s No duplicates found\n",
+        hdupes_color(stdout, HDUPES_GREEN), hdupes_color(stdout, HDUPES_RESET));
+    }
     else printf("%s", s_no_dupes);
   }
 

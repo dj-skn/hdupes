@@ -5,12 +5,16 @@
 #include <inttypes.h>
 #include "hdupes.h"
 #include "likely_unlikely.h"
+#include "style.h"
 
 
 void update_phase1_progress(const char * const restrict type)
 {
-  fprintf(stderr, "\rScanning: %" PRIuMAX " files, %" PRIuMAX " %s (in %u specified)",
-          progress, item_progress, type, user_item_count);
+  fprintf(stderr, "\r%s➤%s Scanning: %" PRIuMAX " files, %" PRIuMAX " %s (in %u specified)%s",
+          hdupes_color(stderr, HDUPES_MAGENTA),
+          hdupes_color(stderr, HDUPES_RESET),
+          progress, item_progress, type, user_item_count,
+          hdupes_color(stderr, HDUPES_RESET));
 //  fflush(stderr);
 }
 
@@ -19,7 +23,9 @@ void update_phase2_progress(const char * const restrict msg, const int file_perc
 {
   static int did_fpct = 0;
 
-  fprintf(stderr, "\rProgress [%" PRIuMAX "/%" PRIuMAX ", %" PRIuMAX " pairs matched] %" PRIuMAX "%%",
+  fprintf(stderr, "\r%s→%s Progress [%" PRIuMAX "/%" PRIuMAX ", %" PRIuMAX " pairs matched] %" PRIuMAX "%%",
+    hdupes_color(stderr, HDUPES_YELLOW),
+    hdupes_color(stderr, HDUPES_RESET),
     progress, filecount, dupecount, (progress * 100) / filecount);
   if (file_percent > -1 && msg != NULL) {
     fprintf(stderr, "  (%s: %d%%)         ", msg, file_percent);
