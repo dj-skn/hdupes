@@ -156,7 +156,7 @@ void help_text(void)
 #endif /* NO_HARDLINKS */
   printf(" -m --summarize   \tsummarize dupe information\n");
   printf(" -M --print-summarize\tprint match sets and --summarize at the end\n");
-  printf("     --large-dupes\tpreset: -r -S -M -A -X size+:1k --threads=8\n");
+  printf("     --large-dupes\tpreset: -r -S -M -X size+:1k --threads=8\n");
 #ifndef NO_DELETE
   printf(" -N --no-prompt   \ttogether with --delete, preserve the first file in\n");
   printf("                  \teach set of duplicates and delete the rest without\n");

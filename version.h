@@ -4,7 +4,7 @@
 #ifndef HDUPES_VERSION_H
 #define HDUPES_VERSION_H
 
-#define VER "1.0.0"
+#define VER "1.0.1"
 #define VERDATE "2025-12-28"
 
 #endif /* HDUPES_VERSION_H */

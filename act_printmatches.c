@@ -16,6 +16,19 @@ typedef struct {
   uintmax_t total_bytes;
 } group_info_t;
 
+static void format_bytes(uintmax_t bytes, char *out, size_t out_size)
+{
+  if (bytes < 1000) {
+    snprintf(out, out_size, "%" PRIuMAX "B", bytes);
+  } else if (bytes < 1000 * 1000) {
+    snprintf(out, out_size, "%.1fKB", (double)bytes / 1000.0);
+  } else if (bytes < 1000ULL * 1000ULL * 1000ULL) {
+    snprintf(out, out_size, "%.1fMB", (double)bytes / 1000000.0);
+  } else {
+    snprintf(out, out_size, "%.1fGB", (double)bytes / 1000000000.0);
+  }
+}
+
 static int group_sort_cmp(const void *a, const void *b)
 {
   const group_info_t *ga = (const group_info_t *)a;
@@ -44,21 +57,45 @@ static void print_group(file_t *head, int cr)
   }
 }
 
+static void print_group_pretty(const group_info_t *group, int group_index)
+{
+  char size_buf[32];
+  file_t *tmpfile = NULL;
+
+  format_bytes((uintmax_t)group->head->size, size_buf, sizeof(size_buf));
+  printf("➤ Group %d · %" PRIuMAX " files · %s each\n", group_index, group->count, size_buf);
+
+  if (!ISFLAG(a_flags, FA_OMITFIRST)) {
+    printf("  → %s\n", group->head->d_name);
+  }
+  tmpfile = group->head->duplicates;
+  while (tmpfile != NULL) {
+    printf("  → %s\n", tmpfile->d_name);
+    tmpfile = tmpfile->duplicates;
+  }
+}
+
 void printmatches(file_t * restrict files)
 {
   file_t * restrict tmpfile;
   int printed = 0;
   int cr = 1;
+  int pretty = 1;
 
   LOUD(fprintf(stderr, "printmatches: %p\n", files));
 
-  if (ISFLAG(a_flags, FA_PRINTNULL)) cr = 2;
+  if (ISFLAG(a_flags, FA_PRINTNULL)) {
+    cr = 2;
+    pretty = 0;
+  }
 
   if (ISFLAG(flags, F_SORTGROUPS)) {
     size_t group_count = 0;
     size_t idx = 0;
     file_t *scan = files;
     group_info_t *groups = NULL;
+    uintmax_t total_bytes = 0;
+    uintmax_t total_files = 0;
 
     while (scan != NULL) {
       if (ISFLAG(scan->flags, FF_HAS_DUPES)) group_count++;
@@ -80,6 +117,8 @@ void printmatches(file_t * restrict files)
         groups[idx].head = scan;
         groups[idx].count = count;
         groups[idx].total_bytes = (uintmax_t)scan->size * count;
+        total_bytes += groups[idx].total_bytes;
+        total_files += count;
         idx++;
       }
       scan = scan->next;
@@ -87,26 +126,60 @@ void printmatches(file_t * restrict files)
 
     if (group_count > 1) qsort(groups, group_count, sizeof(group_info_t), group_sort_cmp);
 
+    if (pretty) {
+      char total_buf[32];
+      format_bytes(total_bytes, total_buf, sizeof(total_buf));
+      printf("\nDuplicate Scan\n\n");
+      printf("⚙ Groups: %" PRIuMAX " | Files: %" PRIuMAX " | Total: %s\n\n", (uintmax_t)group_count, total_files, total_buf);
+    }
+
     for (idx = 0; idx < group_count; idx++) {
       printed = 1;
-      print_group(groups[idx].head, cr);
-      if (idx + 1 < group_count) jc_fwprint(stdout, "", cr);
+      if (pretty) {
+        print_group_pretty(&groups[idx], (int)idx + 1);
+        if (idx + 1 < group_count) printf("\n");
+      } else {
+        print_group(groups[idx].head, cr);
+        if (idx + 1 < group_count) jc_fwprint(stdout, "", cr);
+      }
     }
 
     free(groups);
   } else {
+    if (pretty) {
+      printf("\nDuplicate Scan\n\n");
+      printf("➤ Match groups\n");
+    }
+    int group_index = 0;
     while (files != NULL) {
       if (ISFLAG(files->flags, FF_HAS_DUPES)) {
         printed = 1;
-        print_group(files, cr);
-        if (files->next != NULL) jc_fwprint(stdout, "", cr);
+        if (pretty) {
+          group_info_t group = { files, 0, 0 };
+          uintmax_t count = 1;
+          tmpfile = files->duplicates;
+          while (tmpfile != NULL) {
+            count++;
+            tmpfile = tmpfile->duplicates;
+          }
+          group.count = count;
+          group_index++;
+          print_group_pretty(&group, group_index);
+          if (files->next != NULL) printf("\n");
+        } else {
+          print_group(files, cr);
+          if (files->next != NULL) jc_fwprint(stdout, "", cr);
+        }
       }
 
       files = files->next;
     }
   }
 
-  if (printed == 0) printf("%s", s_no_dupes);
+  if (printed == 0) {
+    if (pretty) printf("✓ No duplicates found\n");
+    else printf("%s", s_no_dupes);
+  }
 
   return;
 }
