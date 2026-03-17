@@ -68,7 +68,7 @@ void deletefiles(file_t *files, int prompt, FILE *tty)
   max++;
 
   dupelist = (file_t **) malloc(sizeof(file_t*) * max);
-  preserve = (unsigned int *) malloc(sizeof(int) * max);
+  preserve = (unsigned int *) malloc(sizeof(unsigned int) * max);
   preservestr = (char *) malloc(INPUT_SIZE);
 
   if (!dupelist || !preserve || !preservestr) jc_oom("deletefiles() structures");
@@ -194,7 +194,7 @@ void deletefiles(file_t *files, int prompt, FILE *tty)
 
         while (token != NULL) {
           if (*token == 'a' || *token == 'A')
-            for (x = 0; x <= counter; x++) preserve[x] = 1;
+            for (x = 1; x <= counter; x++) preserve[x] = 1;
 
           number = 0;
           sscanf(token, "%u", &number);
