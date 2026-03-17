@@ -151,7 +151,7 @@ void loaddir(char * const restrict dir,
 
     if (unlikely(interrupt != 0)) return;
     LOUD(fprintf(stderr, "loaddir: readdir: '%s'\n", dirinfo->d_name));
-    if (unlikely(!jc_streq(dirinfo->d_name, ".") || !jc_streq(dirinfo->d_name, ".."))) continue;
+    if (unlikely(!jc_streq(dirinfo->d_name, ".") && !jc_streq(dirinfo->d_name, ".."))) continue;
     check_sigusr1();
     if (jc_alarm_ring != 0) {
       jc_alarm_ring = 0;
