@@ -69,8 +69,8 @@ int check_conditions(const file_t * const restrict file1, const file_t * const r
           || file1->gid != file2->gid
 #endif
           )) {
-    return -5;
     LOUD(fprintf(stderr, "check_conditions: no match: permissions/ownership differ (-p on)\n"));
+    return -5;
   }
 
   /* Hard link and symlink + '-s' check */
@@ -106,7 +106,7 @@ int check_singlefile(file_t * const restrict newfile)
     if (unlikely(newfile->d_name == NULL)) jc_nullptr("check_singlefile newfile->d_name");
     strcpy(tp, newfile->d_name);
     tp = basename(tp);
-    if (tp[0] == '.' && jc_streq(tp, ".") && jc_streq(tp, "..")) {
+    if (tp[0] == '.' && jc_streq(tp, ".") != 0 && jc_streq(tp, "..") != 0) {
       LOUD(fprintf(stderr, "check_singlefile: excluding hidden file (-A on)\n"));
       return 1;
     }
