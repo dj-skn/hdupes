@@ -10,6 +10,11 @@ extern "C" {
 
 //file_t *grokfile(const char * const restrict name, file_t * restrict * const restrict filelistp);
 void loaddir(char * const restrict dir, file_t * restrict * const restrict filelistp, int recurse);
+#ifdef HDUPES_HAS_THREADS
+void loaddir_parallel_batch(char **dirs, const int first, const int last,
+    file_t * restrict * const restrict filelistp, const int recurse,
+    const unsigned int threads);
+#endif
 
 #ifdef __cplusplus
 }

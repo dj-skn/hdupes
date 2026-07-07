@@ -16,7 +16,7 @@ Forked/inspired from `jdupes` and `ddupes`.
 ```
 hdupes PATH...
 hdupes -r PATH...
-hdupes -r --threads=4 PATH...
+hdupes -r --threads=auto PATH...
 ```
 
 ## Features
@@ -24,6 +24,7 @@ hdupes -r --threads=4 PATH...
 - Actions: print, summarize, delete, hardlink, symlink, dedupe
 - JSON output and hash DB support
 - Candidate-aware pre-hash threading and parallel byte confirmation with `--threads N`
+- Parallel directory traversal with bounded worker pools for threaded scans
 - Threaded scans use the array/group pipeline by default, with `--legacy-tree` as an escape hatch
 - Flexible filters by size, extension, substring, and date
 - Safe defaults and traversal safety checks
@@ -38,7 +39,7 @@ hdupes [options] PATH...
 Examples:
 ```
 hdupes -r ~/Pictures
-hdupes -r --threads=4 ~/Pictures
+hdupes -r --threads=auto ~/Pictures
 hdupes -m ~/Pictures
 hdupes -d ~/Downloads
 ```
@@ -89,13 +90,13 @@ make install PREFIX="$HOME/.local"
 - `-i --reverse` reverse sort order
 - `-I --isolate` files in the same specified directory won't match
 - `-j --json` produce JSON output
-- `-J --threads=#` pre-hash duplicate-size candidates and confirm large matches using N threads
+- `-J --threads=N|auto` parallelize traversal, candidate hashing, and large match confirmation
 - `--legacy-tree` force the old tree matcher instead of the threaded pipeline
 - `-l --link-soft` make relative symlinks for duplicates without prompting
 - `-L --link-hard` hard link duplicates without prompting
 - `-m --summarize` summarize dupe information
 - `-M --print-summarize` print matches and summarize at the end
-- `--large-dupes` preset: `-r -S -M -X size+:1k --threads=8`
+- `--large-dupes` preset: `-r -S -M -X size+:1k --threads=auto`
 - `-N --no-prompt` with `--delete`, keep first file and delete the rest
 - `-O --param-order` parameter order is more important than selected sort
 - `-o --order=BY` sort by `name` (default) or `time`

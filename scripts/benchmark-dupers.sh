@@ -4,7 +4,7 @@ set -eu
 
 TARGET=${1:-testdir}
 HDUPES=${HDUPES:-./hdupes}
-THREADS=${THREADS:-8}
+THREADS=${THREADS:-auto}
 RUNS=${RUNS:-3}
 HASHDB=${HASHDB:-}
 PIPELINE=${PIPELINE:-0}
@@ -47,7 +47,7 @@ if [ -n "$HASHDB" ]; then
 fi
 echo
 
-bench "hdupes-serial" "$HDUPES" -q -r "$TARGET"
+bench "hdupes-serial" "$HDUPES" -q -r --threads=1 --legacy-tree "$TARGET"
 bench "hdupes-threaded" "$HDUPES" -q -r --threads="$THREADS" "$TARGET"
 if [ "$PIPELINE" != "0" ]; then
   bench "hdupes-pipeline" "$HDUPES" -q -r --threads="$THREADS" --experimental-pipeline "$TARGET"
