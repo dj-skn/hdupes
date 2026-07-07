@@ -33,6 +33,10 @@ snapshot_tree() {
   (cd "$target" && find . -print | sort)
 }
 
+normalize_null_output() {
+  tr '\0' '\n' < "$1" | sed '/^$/d' | sort
+}
+
 inode_of() {
   ls -id "$1" | awk '{ print $1 }'
 }
@@ -50,6 +54,8 @@ cp "$ROOT/input/a/large-one.bin" "$ROOT/input/unique/large-same-size-different-t
 printf 'tail' | dd of="$ROOT/input/unique/large-same-size-different-tail.bin" bs=1 seek=$((256 * 1024 - 4)) conv=notrunc 2>/dev/null
 
 "$HDUPES" -q -0 -r "$ROOT/input" > "$ROOT/serial.out" 2> "$ROOT/serial.err"
+"$HDUPES" -q -0 -r --threads=auto "$ROOT/input" > "$ROOT/auto.out" 2> "$ROOT/auto.err"
+"$HDUPES" -q -0 -r --threads=1 --legacy-tree "$ROOT/input" > "$ROOT/single-legacy.out" 2> "$ROOT/single-legacy.err"
 "$HDUPES" -q -0 -r --threads=4 "$ROOT/input" > "$ROOT/threaded.out" 2> "$ROOT/threaded.err"
 "$HDUPES" -q -0 -r --threads=4 --legacy-tree "$ROOT/input" > "$ROOT/legacy-tree.out" 2> "$ROOT/legacy-tree.err"
 "$HDUPES" -q -0 -r --threads=4 --experimental-pipeline "$ROOT/input" > "$ROOT/pipeline.out" 2> "$ROOT/pipeline.err"
@@ -68,6 +74,10 @@ printf 'tail' | dd of="$ROOT/input/unique/large-same-size-different-tail.bin" bs
 "$HDUPES" -q -0 -r -X onlyext:txt --threads=4 "$ROOT/input" > "$ROOT/filter-threaded.out" 2> "$ROOT/filter-threaded.err"
 
 cmp "$ROOT/serial.out" "$ROOT/threaded.out" || fail "threaded output differs from serial output"
+cmp "$ROOT/serial.out" "$ROOT/auto.out" || fail "default auto output differs from explicit --threads=auto output"
+normalize_null_output "$ROOT/serial.out" > "$ROOT/serial.normalized"
+normalize_null_output "$ROOT/single-legacy.out" > "$ROOT/single-legacy.normalized"
+cmp "$ROOT/serial.normalized" "$ROOT/single-legacy.normalized" || fail "default auto output differs from single-thread legacy output set"
 cmp "$ROOT/threaded.out" "$ROOT/legacy-tree.out" || fail "threaded pipeline output differs from legacy tree output"
 cmp "$ROOT/threaded.out" "$ROOT/pipeline.out" || fail "experimental pipeline output differs from threaded output"
 cmp "$ROOT/threaded.out" "$ROOT/hashdb-cold.out" || fail "hash DB cold output differs from threaded output"

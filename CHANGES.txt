@@ -1,5 +1,11 @@
 hdupes next
 
+- --threads now accepts "auto" and defaults to an adaptive worker count capped
+  at 8; --threads=1 preserves single-threaded behavior
+- Threaded scans now use a bounded parallel directory walker with deterministic
+  post-collection ordering
+- macOS builds try getattrlistbulk() for batched directory entry enumeration
+  and fall back to the portable readdir() path if needed
 - Threaded pre-hashing is now candidate-aware: unique-size files are not
   hashed, and full hashes are only computed for size+partial-hash candidate
   groups

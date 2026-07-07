@@ -128,6 +128,20 @@ unsigned int user_item_count = 1;
 
 /* Number of threads for pre-hashing */
 unsigned int hash_threads = 1;
+static int hash_threads_auto = 1;
+
+#ifdef HDUPES_HAS_THREADS
+static unsigned int detect_auto_threads(void)
+{
+  long cpus = sysconf(_SC_NPROCESSORS_ONLN);
+  unsigned int threads;
+
+  if (cpus < 2) return 1;
+  threads = (unsigned int)cpus;
+  if (threads > 8) threads = 8;
+  return threads;
+}
+#endif
 
 /* Sort order reversal */
 int sort_direction = 1;
@@ -422,7 +436,13 @@ int main(int argc, char **argv)
 #ifdef HDUPES_HAS_THREADS
       {
         char *end = NULL;
-        unsigned long value = strtoul(optarg, &end, 10);
+        unsigned long value;
+        if (optarg != NULL && jc_strcaseeq(optarg, "auto") == 0) {
+          hash_threads_auto = 1;
+          hash_threads = 0;
+          break;
+        }
+        value = strtoul(optarg, &end, 10);
         if (optarg == NULL || end == optarg || *end != '\0' || value == 0) {
           fprintf(stderr, "invalid value for --threads: '%s'\n", optarg);
           exit(EXIT_FAILURE);
@@ -432,6 +452,7 @@ int main(int argc, char **argv)
           value = 256;
         }
         hash_threads = (unsigned int)value;
+        hash_threads_auto = 0;
         LOUD(fprintf(stderr, "opt: pre-hash using %u threads (--threads)\n", hash_threads);)
       }
 #else
@@ -581,7 +602,8 @@ int main(int argc, char **argv)
       fprintf(stderr, "warning: --large-dupes requires extfilter support; size filter skipped\n");
 #endif
 #ifdef HDUPES_HAS_THREADS
-      hash_threads = 8;
+      hash_threads_auto = 1;
+      hash_threads = 0;
 #endif
       LOUD(fprintf(stderr, "opt: preset large dupes scan (--large-dupes)\n");)
       break;
@@ -603,6 +625,10 @@ int main(int argc, char **argv)
     fprintf(stderr, "no files or directories specified (use -h option for help)\n");
     exit(EXIT_FAILURE);
   }
+
+#ifdef HDUPES_HAS_THREADS
+  if (hash_threads_auto) hash_threads = detect_auto_threads();
+#endif
 
   /* Make noise if people try to use -T because it's super dangerous */
   if (partialonly_spec > 0) {
@@ -699,7 +725,9 @@ skip_partialonly_noise:
       exit(EXIT_FAILURE);
     }
 
-    /* F_RECURSE is not set for directories before --recurse: */
+    /* F_RECURSE is not set for directories before --recurse:.
+     * Keep --recurse: on the legacy traversal path so its traversal-check
+     * state spans both argument ranges exactly as before. */
     for (int x = optind; x < firstrecurse; x++) {
       if (unlikely(interrupt)) goto interrupt_exit;
       loaddir(argv[x], &files, 0);
@@ -715,10 +743,18 @@ skip_partialonly_noise:
       user_item_count++;
     }
   } else {
-    for (int x = optind; x < argc; x++) {
+#ifdef HDUPES_HAS_THREADS
+    if (hash_threads > 1) {
+      loaddir_parallel_batch(argv, optind, argc, &files, ISFLAG(flags, F_RECURSE), hash_threads);
       if (unlikely(interrupt)) goto interrupt_exit;
-      loaddir(argv[x], &files, ISFLAG(flags, F_RECURSE));
-      user_item_count++;
+    } else
+#endif
+    {
+      for (int x = optind; x < argc; x++) {
+        if (unlikely(interrupt)) goto interrupt_exit;
+        loaddir(argv[x], &files, ISFLAG(flags, F_RECURSE));
+        user_item_count++;
+      }
     }
   }
 

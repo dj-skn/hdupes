@@ -81,8 +81,10 @@ files are under different parameter specifications
 .B -j --json
 produce JSON (machine-readable) output
 .TP
-.B -J --threads=\fIN\fR
-pre-hash duplicate-size candidates and confirm large matches using N threads.
+.B -J --threads=\fIN|auto\fR
+traverse directories, pre-hash duplicate-size candidates, and confirm large
+matches using N threads. The default is auto, capped conservatively to avoid
+overdriving local storage.
 Unique-size files are skipped. Full hashes are only precomputed for
 candidate groups that still match after partial hashing. Threaded scans use
 the array/group matching pipeline by default unless \-\-legacy\-tree is set.
@@ -101,7 +103,7 @@ summarize duplicate file information
 print matches and summarize the duplicate file information at the end
 .TP
 .B --large-dupes
-preset: \-r \-S \-M \-X size+:1k \-\-threads=8
+preset: \-r \-S \-M \-X size+:1k \-\-threads=auto
 .TP
 .B -N --no-prompt
 when used together with \-\-delete, preserve the first file in each set of

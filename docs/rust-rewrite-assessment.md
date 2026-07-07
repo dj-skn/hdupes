@@ -15,6 +15,7 @@ worth the migration cost.
 The main speed gains come from avoiding unnecessary I/O:
 
 - group files by size before hashing
+- walk large directory trees concurrently without losing deterministic output
 - partial-hash only duplicate-size candidates
 - full-hash only size+partial-hash candidate groups
 - confirm bytes only inside full-hash groups
@@ -54,6 +55,7 @@ Consider a Rust rewrite only after the C implementation has:
 
 - a benchmark harness with repeatable datasets (implemented)
 - serial/threaded correctness parity tests (implemented)
+- adaptive default threading and parallel traversal (implemented)
 - candidate-aware parallel hashing (implemented)
 - parallel byte confirmation or a measured reason not to use it (implemented
   in the C engine for threaded large-file matches)

@@ -139,7 +139,7 @@ void help_text(void)
   printf(" -j --json        \tproduce JSON (machine-readable) output\n");
 #endif /* NO_JSON */
 #ifdef HDUPES_HAS_THREADS
-  printf(" -J --threads=#   \tuse N threads for candidate hashing and confirmation\n");
+  printf(" -J --threads=N|auto\tuse N threads for traversal, hashing, and confirmation\n");
 #endif
 /*  printf(" -K --skip-hash   \tskip full file hashing (may be faster; 100%% safe)\n");
     printf("                  \tWARNING: in development, not fully working yet!\n"); */
@@ -156,7 +156,7 @@ void help_text(void)
 #endif /* NO_HARDLINKS */
   printf(" -m --summarize   \tsummarize dupe information\n");
   printf(" -M --print-summarize\tprint match sets and --summarize at the end\n");
-  printf("     --large-dupes\tpreset: -r -S -M -X size+:1k --threads=8\n");
+  printf("     --large-dupes\tpreset: -r -S -M -X size+:1k --threads=auto\n");
   printf("     --legacy-tree\tforce the old tree matcher instead of threaded pipeline\n");
 #ifndef NO_DELETE
   printf(" -N --no-prompt   \ttogether with --delete, preserve the first file in\n");
