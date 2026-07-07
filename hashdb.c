@@ -95,6 +95,7 @@ int save_hash_database(const char * const restrict dbname, const int destroy)
     }
     if (jc_rename(dbtemp, dbname) != 0) goto error_hashdb_rename;
     LOUD(if (hashdb_dirty == 1) fprintf(stderr, "Wrote %" PRIu64 " items to hash databse '%s'\n", cnt, dbname);)
+    free(dbtemp);
     hashdb_dirty = 0;
   }
 
@@ -105,10 +106,12 @@ error_hashdb_null:
   return -1;
 error_hashdb_open:
   fprintf(stderr, "error: cannot open temp hashdb '%s' for writing: %s\n", dbtemp, strerror(errno));
+  free(dbtemp);
   return -2;
 error_hashdb_write:
   fprintf(stderr, "error: write failed to temp hashdb '%s': %s\n", dbtemp, strerror(errno));
   fclose(db);
+  free(dbtemp);
   return -3;
 error_hashdb_alloc:
   fprintf(stderr, "error: cannot allocate memory for temporary hashdb name\n");
@@ -116,9 +119,11 @@ error_hashdb_alloc:
 error_hashdb_remove:
   fprintf(stderr, "error: cannot delete old hashdb '%s': %s\n", dbname, strerror(errno));
   jc_remove(dbtemp);
+  free(dbtemp);
   return -5;
 error_hashdb_rename:
   fprintf(stderr, "error: cannot rename temporary hashdb '%s' to '%s'; leaving it alone: %s\n", dbtemp, dbname, strerror(errno));
+  free(dbtemp);
   return -5;
 }
 
