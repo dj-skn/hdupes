@@ -25,6 +25,26 @@ typedef struct hashpool_ctx {
 #endif
 } hashpool_ctx_t;
 
+static int cmp_file_size(const void *a, const void *b)
+{
+  const file_t *fa = *(file_t * const *)a;
+  const file_t *fb = *(file_t * const *)b;
+
+  if (fa->size < fb->size) return -1;
+  if (fa->size > fb->size) return 1;
+  return 0;
+}
+
+static int cmp_file_partial_hash(const void *a, const void *b)
+{
+  const file_t *fa = *(file_t * const *)a;
+  const file_t *fb = *(file_t * const *)b;
+
+  if (fa->filehash_partial < fb->filehash_partial) return -1;
+  if (fa->filehash_partial > fb->filehash_partial) return 1;
+  return 0;
+}
+
 static int compute_partial_hash(file_t *file, void *buffer)
 {
   uint64_t hash = 0;
@@ -103,14 +123,53 @@ static void *hash_worker(void *arg)
   return NULL;
 }
 
+static int run_hash_workers(file_t **items, size_t count, unsigned int threads,
+                            int do_full, int use_hashdb)
+{
+  pthread_t *tids = NULL;
+  hashpool_ctx_t ctx;
+  size_t i;
+
+  if (items == NULL || count == 0 || threads <= 1) return 0;
+
+  ctx.items = items;
+  ctx.count = count;
+  ctx.index = 0;
+  ctx.do_full = do_full;
+  ctx.use_hashdb = use_hashdb;
+#ifndef NO_HASHDB
+  if (ctx.use_hashdb) pthread_mutex_init(&ctx.hashdb_lock, NULL);
+#endif
+
+  tids = (pthread_t *)calloc(threads, sizeof(pthread_t));
+  if (tids == NULL) {
+#ifndef NO_HASHDB
+    if (ctx.use_hashdb) pthread_mutex_destroy(&ctx.hashdb_lock);
+#endif
+    return -1;
+  }
+
+  for (i = 0; i < threads; i++) pthread_create(&tids[i], NULL, hash_worker, &ctx);
+  for (i = 0; i < threads; i++) pthread_join(tids[i], NULL);
+
+#ifndef NO_HASHDB
+  if (ctx.use_hashdb) pthread_mutex_destroy(&ctx.hashdb_lock);
+#endif
+  free(tids);
+  return 0;
+}
+
 int prehash_files(file_t *files, unsigned int threads)
 {
   size_t count = 0;
   size_t i = 0;
+  size_t candidate_count = 0;
+  size_t full_count = 0;
   file_t *cur = files;
   file_t **items = NULL;
-  pthread_t *tids = NULL;
-  hashpool_ctx_t ctx;
+  file_t **candidates = NULL;
+  file_t **full_candidates = NULL;
+  int use_hashdb = ISFLAG(flags, F_HASHDB);
 
   if (files == NULL || threads <= 1) return 0;
 
@@ -129,31 +188,81 @@ int prehash_files(file_t *files, unsigned int threads)
     cur = cur->next;
   }
 
-  ctx.items = items;
-  ctx.count = count;
-  ctx.index = 0;
-  ctx.do_full = !ISFLAG(flags, F_PARTIALONLY);
-  ctx.use_hashdb = ISFLAG(flags, F_HASHDB);
-#ifndef NO_HASHDB
-  if (ctx.use_hashdb) pthread_mutex_init(&ctx.hashdb_lock, NULL);
-#endif
+  qsort(items, count, sizeof(file_t *), cmp_file_size);
 
-  tids = (pthread_t *)calloc(threads, sizeof(pthread_t));
-  if (tids == NULL) {
+  candidates = (file_t **)calloc(count, sizeof(file_t *));
+  if (candidates == NULL) {
     free(items);
-#ifndef NO_HASHDB
-    if (ctx.use_hashdb) pthread_mutex_destroy(&ctx.hashdb_lock);
-#endif
     return -1;
   }
 
-  for (i = 0; i < threads; i++) pthread_create(&tids[i], NULL, hash_worker, &ctx);
-  for (i = 0; i < threads; i++) pthread_join(tids[i], NULL);
+  i = 0;
+  while (i < count) {
+    size_t start = i;
+    off_t size = items[i]->size;
 
-#ifndef NO_HASHDB
-  if (ctx.use_hashdb) pthread_mutex_destroy(&ctx.hashdb_lock);
-#endif
-  free(tids);
+    while (i < count && items[i]->size == size) i++;
+    if (i - start > 1) {
+      size_t j;
+      for (j = start; j < i; j++) candidates[candidate_count++] = items[j];
+    }
+  }
+
+  if (candidate_count == 0) {
+    free(candidates);
+    free(items);
+    return 0;
+  }
+
+  if (run_hash_workers(candidates, candidate_count, threads, 0, use_hashdb) != 0) {
+    free(candidates);
+    free(items);
+    return -1;
+  }
+
+  if (ISFLAG(flags, F_PARTIALONLY)) {
+    free(candidates);
+    free(items);
+    return 0;
+  }
+
+  full_candidates = (file_t **)calloc(candidate_count, sizeof(file_t *));
+  if (full_candidates == NULL) {
+    free(candidates);
+    free(items);
+    return -1;
+  }
+
+  qsort(candidates, candidate_count, sizeof(file_t *), cmp_file_size);
+
+  i = 0;
+  while (i < candidate_count) {
+    size_t size_start = i;
+    off_t size = candidates[i]->size;
+
+    while (i < candidate_count && candidates[i]->size == size) i++;
+    qsort(candidates + size_start, i - size_start, sizeof(file_t *), cmp_file_partial_hash);
+
+    {
+      size_t j = size_start;
+      while (j < i) {
+        size_t hash_start = j;
+        uint64_t partial = candidates[j]->filehash_partial;
+
+        while (j < i && candidates[j]->filehash_partial == partial) j++;
+        if (j - hash_start > 1 && size > PARTIAL_HASH_SIZE) {
+          size_t k;
+          for (k = hash_start; k < j; k++) full_candidates[full_count++] = candidates[k];
+        }
+      }
+    }
+  }
+
+  if (full_count > 0)
+    (void)run_hash_workers(full_candidates, full_count, threads, 1, use_hashdb);
+
+  free(full_candidates);
+  free(candidates);
   free(items);
   return 0;
 }

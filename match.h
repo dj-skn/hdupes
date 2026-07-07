@@ -18,6 +18,8 @@ void registerpair(file_t **matchlist, file_t *newmatch, int (*comparef)(file_t *
 void registerfile(filetree_t * restrict * const restrict nodeptr, const enum tree_direction d, file_t * const restrict file);
 file_t **checkmatch(filetree_t * restrict tree, file_t * const restrict file);
 int confirmmatch(const char * const restrict file1, const char * const restrict file2, const off_t size);
+int confirmmatch_parallel(const char * const restrict file1, const char * const restrict file2,
+    const off_t size, unsigned int threads);
 
 #ifdef __cplusplus
 }

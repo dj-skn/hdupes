@@ -23,7 +23,8 @@ hdupes -r --threads=4 PATH...
 - Accurate matching pipeline: size -> partial hash -> full hash -> byte compare
 - Actions: print, summarize, delete, hardlink, symlink, dedupe
 - JSON output and hash DB support
-- Pre-hash threading with `--threads N` (hashing stage only)
+- Candidate-aware pre-hash threading and parallel byte confirmation with `--threads N`
+- Threaded scans use the array/group pipeline by default, with `--legacy-tree` as an escape hatch
 - Flexible filters by size, extension, substring, and date
 - Safe defaults and traversal safety checks
 - Group sorting by total size (`--sort-groups`)
@@ -88,7 +89,8 @@ make install PREFIX="$HOME/.local"
 - `-i --reverse` reverse sort order
 - `-I --isolate` files in the same specified directory won't match
 - `-j --json` produce JSON output
-- `-J --threads=#` pre-hash files using N threads (hashing stage only)
+- `-J --threads=#` pre-hash duplicate-size candidates and confirm large matches using N threads
+- `--legacy-tree` force the old tree matcher instead of the threaded pipeline
 - `-l --link-soft` make relative symlinks for duplicates without prompting
 - `-L --link-hard` hard link duplicates without prompting
 - `-m --summarize` summarize dupe information
