@@ -1,5 +1,7 @@
 # hdupes
 
+[![CI](https://github.com/dj-skn/hdupes/actions/workflows/ci.yml/badge.svg)](https://github.com/dj-skn/hdupes/actions/workflows/ci.yml)
+
 Fast, safe duplicate-file finder with optional actions.
 
 Forked/inspired from `jdupes` and `ddupes`.

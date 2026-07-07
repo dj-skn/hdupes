@@ -1,0 +1,43 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-test:
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [ubuntu-latest, macos-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - uses: actions/checkout@v4
+      # the Makefile picks up a sibling checkout at ../libjodycode automatically
+      - name: Fetch libjodycode (build dependency)
+        run: git clone --depth 1 https://codeberg.org/jbruchon/libjodycode ../libjodycode
+      - name: Build libjodycode
+        run: make -C ../libjodycode
+      - name: Build hdupes (statically linked libjodycode)
+        run: make static_jc
+      - name: Run test suite
+        run: make test
+
+  sanitizers:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Fetch libjodycode (build dependency)
+        run: git clone --depth 1 https://codeberg.org/jbruchon/libjodycode ../libjodycode
+      - name: Build libjodycode
+        run: make -C ../libjodycode
+      - name: Build hdupes with ASan/UBSan
+        run: make static_jc CFLAGS_EXTRA='-fsanitize=address,undefined -fno-omit-frame-pointer' LDFLAGS_EXTRA='-fsanitize=address,undefined'
+      - name: Run test suite under sanitizers
+        run: make test
