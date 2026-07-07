@@ -169,12 +169,22 @@ fi
 
 make_action_tree "$ROOT/dedupe-default"
 make_action_tree "$ROOT/dedupe-pipeline"
-"$HDUPES" -q -r -B --threads=4 "$ROOT/dedupe-default" > "$ROOT/dedupe-default.out" 2> "$ROOT/dedupe-default.err"
-"$HDUPES" -q -r -B --threads=4 --experimental-pipeline "$ROOT/dedupe-pipeline" > "$ROOT/dedupe-pipeline.out" 2> "$ROOT/dedupe-pipeline.err"
-snapshot_tree "$ROOT/dedupe-default" > "$ROOT/dedupe-default.tree"
-snapshot_tree "$ROOT/dedupe-pipeline" > "$ROOT/dedupe-pipeline.tree"
-cmp "$ROOT/dedupe-default.tree" "$ROOT/dedupe-pipeline.tree" || fail "pipeline dedupe result differs from threaded dedupe"
-cmp "$ROOT/dedupe-pipeline/a/dup-one.txt" "$ROOT/dedupe-pipeline/b/dup-two.txt" || fail "pipeline dedupe changed first duplicate contents"
-cmp "$ROOT/dedupe-pipeline/a/dup-three.txt" "$ROOT/dedupe-pipeline/b/dup-four.txt" || fail "pipeline dedupe changed second duplicate contents"
+dedupe_supported=1
+"$HDUPES" -q -r -B --threads=4 "$ROOT/dedupe-default" > "$ROOT/dedupe-default.out" 2> "$ROOT/dedupe-default.err" || {
+  if grep -q "Operation not supported" "$ROOT/dedupe-default.err"; then
+    dedupe_supported=0
+    echo "SKIP: filesystem does not support block-level dedupe"
+  else
+    fail "dedupe run failed: $(cat "$ROOT/dedupe-default.err")"
+  fi
+}
+if [ "$dedupe_supported" -eq 1 ]; then
+  "$HDUPES" -q -r -B --threads=4 --experimental-pipeline "$ROOT/dedupe-pipeline" > "$ROOT/dedupe-pipeline.out" 2> "$ROOT/dedupe-pipeline.err"
+  snapshot_tree "$ROOT/dedupe-default" > "$ROOT/dedupe-default.tree"
+  snapshot_tree "$ROOT/dedupe-pipeline" > "$ROOT/dedupe-pipeline.tree"
+  cmp "$ROOT/dedupe-default.tree" "$ROOT/dedupe-pipeline.tree" || fail "pipeline dedupe result differs from threaded dedupe"
+  cmp "$ROOT/dedupe-pipeline/a/dup-one.txt" "$ROOT/dedupe-pipeline/b/dup-two.txt" || fail "pipeline dedupe changed first duplicate contents"
+  cmp "$ROOT/dedupe-pipeline/a/dup-three.txt" "$ROOT/dedupe-pipeline/b/dup-four.txt" || fail "pipeline dedupe changed second duplicate contents"
+fi
 
 echo "OK"
