@@ -1,3 +1,20 @@
+hdupes next
+
+- Threaded pre-hashing is now candidate-aware: unique-size files are not
+  hashed, and full hashes are only computed for size+partial-hash candidate
+  groups
+- Threaded scans now use bounded parallel byte confirmation for large matched
+  pairs while keeping the serial confirmation fallback
+- Replaced dummy test script with regression tests for serial/threaded parity
+  and candidate-aware prehash behavior
+- Added benchmark helpers for generating repeatable fixture trees and comparing
+  hdupes, jdupes, fdupes, and ffdupes
+- Benchmark helper can optionally include populated hash DB warm-run timings
+- Added an experimental array/group matching pipeline behind
+  --experimental-pipeline for compatibility and performance testing
+- Threaded scans now use the array/group pipeline by default; --legacy-tree
+  keeps the old matcher available for diagnostics and fallback
+
 hdupes 1.27.3 (2023-08-26)
 
 - Fix crash on Linux when opening a file for hashing fails

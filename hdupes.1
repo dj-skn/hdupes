@@ -82,7 +82,13 @@ files are under different parameter specifications
 produce JSON (machine-readable) output
 .TP
 .B -J --threads=\fIN\fR
-pre-hash files using N threads (hashing stage only)
+pre-hash duplicate-size candidates and confirm large matches using N threads.
+Unique-size files are skipped. Full hashes are only precomputed for
+candidate groups that still match after partial hashing. Threaded scans use
+the array/group matching pipeline by default unless \-\-legacy\-tree is set.
+.TP
+.B --legacy-tree
+force the old tree matcher instead of the threaded array/group pipeline
 .TP
 .B -L --link-hard
 replace all duplicate files with hardlinks to the first file in each set

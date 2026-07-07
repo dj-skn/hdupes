@@ -4,6 +4,11 @@
 #ifdef __linux__
  #include <fcntl.h>
 #endif
+#if !defined(_WIN32) && !defined(__MINGW32__)
+ #include <fcntl.h>
+ #include <pthread.h>
+ #include <unistd.h>
+#endif
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -363,7 +368,7 @@ file_t **checkmatch(filetree_t * restrict tree, file_t * const restrict file)
    same signature. Unlikely, but better safe than sorry. */
 int confirmmatch(const char * const restrict file1, const char * const restrict file2, const off_t size)
 {
-  static char *c1 = NULL, *c2 = NULL;
+  char *c1 = NULL, *c2 = NULL;
   FILE *fp1, *fp2;
   size_t r1, r2;
   off_t bytes = 0;
@@ -372,10 +377,8 @@ int confirmmatch(const char * const restrict file1, const char * const restrict 
   if (unlikely(file1 == NULL || file2 == NULL)) jc_nullptr("confirmmatch()");
   LOUD(fprintf(stderr, "confirmmatch running\n"));
 
-  if (unlikely(c1 == NULL || c2 == NULL)) {
-    c1 = (char *)malloc(auto_chunk_size);
-    c2 = (char *)malloc(auto_chunk_size);
-  }
+  c1 = (char *)malloc(auto_chunk_size);
+  c2 = (char *)malloc(auto_chunk_size);
   if (unlikely(c1 == NULL || c2 == NULL)) jc_oom("confirmmatch() buffers");
 
   fp1 = jc_fopen(file1, JC_FILE_MODE_RDONLY_SEQ);
@@ -423,7 +426,121 @@ different:
   retval = 1;
 
 finish_confirm:
-//  free(c1); free(c2);
-  fclose(fp1); fclose(fp2);
+  free(c1); free(c2);
+  if (fp1 != NULL) fclose(fp1);
+  if (fp2 != NULL) fclose(fp2);
   return retval;
 }
+
+#ifdef HDUPES_HAS_THREADS
+typedef struct confirm_range_ctx {
+  int fd1;
+  int fd2;
+  off_t size;
+  size_t chunk_size;
+  uintmax_t chunks;
+  volatile uintmax_t next_chunk;
+  volatile int different;
+} confirm_range_ctx_t;
+
+static int read_range_exact(int fd, char *buf, size_t len, off_t offset)
+{
+  size_t done = 0;
+
+  while (done < len) {
+    ssize_t got = pread(fd, buf + done, len - done, offset + (off_t)done);
+    if (got <= 0) return -1;
+    done += (size_t)got;
+  }
+
+  return 0;
+}
+
+static void *confirm_range_worker(void *arg)
+{
+  confirm_range_ctx_t *ctx = (confirm_range_ctx_t *)arg;
+  char *c1 = NULL;
+  char *c2 = NULL;
+
+  c1 = (char *)malloc(ctx->chunk_size);
+  c2 = (char *)malloc(ctx->chunk_size);
+  if (c1 == NULL || c2 == NULL) {
+    ctx->different = 1;
+    free(c1); free(c2);
+    return NULL;
+  }
+
+  for (;;) {
+    uintmax_t idx;
+    off_t offset;
+    size_t bytes;
+
+    if (ctx->different || interrupt) break;
+
+    idx = __sync_fetch_and_add(&ctx->next_chunk, 1);
+    if (idx >= ctx->chunks) break;
+
+    offset = (off_t)(idx * (uintmax_t)ctx->chunk_size);
+    bytes = (ctx->size - offset > (off_t)ctx->chunk_size)
+      ? ctx->chunk_size
+      : (size_t)(ctx->size - offset);
+
+    if (read_range_exact(ctx->fd1, c1, bytes, offset) != 0 ||
+        read_range_exact(ctx->fd2, c2, bytes, offset) != 0 ||
+        memcmp(c1, c2, bytes) != 0) {
+      ctx->different = 1;
+      break;
+    }
+  }
+
+  free(c1); free(c2);
+  return NULL;
+}
+
+int confirmmatch_parallel(const char * const restrict file1, const char * const restrict file2,
+    const off_t size, unsigned int threads)
+{
+  confirm_range_ctx_t ctx;
+  pthread_t *tids = NULL;
+  unsigned int i;
+  int retval = 1;
+
+  if (unlikely(file1 == NULL || file2 == NULL)) jc_nullptr("confirmmatch_parallel()");
+  if (threads <= 1 || size < (off_t)(auto_chunk_size * 2)) return confirmmatch(file1, file2, size);
+
+  ctx.fd1 = open(file1, O_RDONLY);
+  if (ctx.fd1 < 0) return 1;
+  ctx.fd2 = open(file2, O_RDONLY);
+  if (ctx.fd2 < 0) {
+    close(ctx.fd1);
+    return 1;
+  }
+
+  ctx.size = size;
+  ctx.chunk_size = auto_chunk_size;
+  ctx.chunks = ((uintmax_t)size + (uintmax_t)ctx.chunk_size - 1) / (uintmax_t)ctx.chunk_size;
+  ctx.next_chunk = 0;
+  ctx.different = 0;
+
+  tids = (pthread_t *)calloc(threads, sizeof(pthread_t));
+  if (tids == NULL) goto finish_parallel_confirm;
+
+  for (i = 0; i < threads; i++) pthread_create(&tids[i], NULL, confirm_range_worker, &ctx);
+  for (i = 0; i < threads; i++) pthread_join(tids[i], NULL);
+
+  retval = (ctx.different || interrupt) ? 1 : 0;
+
+finish_parallel_confirm:
+  free(tids);
+  close(ctx.fd1);
+  close(ctx.fd2);
+  return retval;
+}
+#else
+int confirmmatch_parallel(const char * const restrict file1, const char * const restrict file2,
+    const off_t size, unsigned int threads)
+{
+  (void)threads;
+  return confirmmatch(file1, file2, size);
+}
+#endif /* HDUPES_HAS_THREADS */

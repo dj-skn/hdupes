@@ -40,6 +40,7 @@
 #include "helptext.h"
 #include "loaddir.h"
 #include "match.h"
+#include "pipeline.h"
 #include "progress.h"
 #include "interrupt.h"
 #include "sort.h"
@@ -228,6 +229,8 @@ int main(int argc, char **argv)
     { "soft-abort", 0, 0, 'Z' },
     { "zero-match", 0, 0, 'z' },
     { "large-dupes", 0, 0, 1000 },
+    { "experimental-pipeline", 0, 0, 1001 },
+    { "legacy-tree", 0, 0, 1002 },
     { NULL, 0, 0, 0 }
   };
  #define GETOPT getopt_long
@@ -582,6 +585,12 @@ int main(int argc, char **argv)
 #endif
       LOUD(fprintf(stderr, "opt: preset large dupes scan (--large-dupes)\n");)
       break;
+    case 1001:
+      SETFLAG(flags, F_EXPERIMENTALPIPELINE);
+      break;
+    case 1002:
+      SETFLAG(flags, F_LEGACYTREE);
+      break;
 
     default:
       if (opt != '?') fprintf(stderr, "Sorry, using '-%c' is not supported in this build.\n", opt);
@@ -752,6 +761,25 @@ skip_partialonly_noise:
   /* Force an immediate progress update */
   if (!ISFLAG(flags, F_HIDEPROGRESS)) jc_alarm_ring = 1;
 
+  {
+  int use_pipeline =
+#ifdef HDUPES_HAS_THREADS
+    (hash_threads > 1 || ISFLAG(flags, F_EXPERIMENTALPIPELINE)) && !ISFLAG(flags, F_LEGACYTREE);
+#else
+    ISFLAG(flags, F_EXPERIMENTALPIPELINE) && !ISFLAG(flags, F_LEGACYTREE);
+#endif
+
+  if (use_pipeline && p_flags != 0) {
+    if (ISFLAG(flags, F_EXPERIMENTALPIPELINE))
+      fprintf(stderr, "warning: --experimental-pipeline does not support -P diagnostics yet; using legacy matcher\n");
+    use_pipeline = 0;
+  }
+
+  if (use_pipeline) {
+    if (pipeline_match_files(files, ordertype) != 0 && !ISFLAG(flags, F_SOFTABORT))
+      exit(EXIT_FAILURE);
+    progress = filecount;
+  } else {
   while (curfile) {
     static file_t **match = NULL;
 
@@ -790,7 +818,15 @@ skip_partialonly_noise:
         goto skip_full_check;
       }
 
-      if (confirmmatch(curfile->d_name, (*match)->d_name, curfile->size) == 0) {
+      if (
+#ifdef HDUPES_HAS_THREADS
+          ((hash_threads > 1)
+            ? confirmmatch_parallel(curfile->d_name, (*match)->d_name, curfile->size, hash_threads)
+            : confirmmatch(curfile->d_name, (*match)->d_name, curfile->size))
+#else
+          confirmmatch(curfile->d_name, (*match)->d_name, curfile->size)
+#endif
+          == 0) {
         LOUD(fprintf(stderr, "MAIN: registering matched file pair\n"));
 #ifndef NO_MTIME
         registerpair(match, curfile, (ordertype == ORDER_TIME) ? sort_pairs_by_mtime : sort_pairs_by_filename);
@@ -813,6 +849,8 @@ skip_full_check:
       update_phase2_progress(NULL, -1);
     }
     progress++;
+  }
+  }
   }
 
   if (!ISFLAG(flags, F_HIDEPROGRESS)) fprintf(stderr, "\r%60s\r", " ");
